@@ -1,0 +1,405 @@
+# Leanlings glossary. Format: docs/curriculum/CURRICULUM.md.
+# `summary` is the popover; `explanation` is the glossary panel.
+# `introduced_in` must be the first chapter that mentions the term (the
+# verifier checks this).
+
+# ── Concepts ─────────────────────────────────────────────────────────────
+
+[term.proof_assistant]
+title = "Proof assistant"
+kind = "concept"
+introduced_in = "ch01"
+summary = "A program that checks mathematical proofs step by step. Lean is one."
+explanation = """
+A proof assistant lets you write statements and proofs in a precise language,
+and checks that every step of every proof is valid. If it accepts a proof, the
+statement really follows from the assumptions. It also helps you along the way
+by showing what's left to prove.
+
+Lean, Rocq (formerly Coq), Isabelle and Agda are examples of proof assistants.
+"""
+see_also = ["proof", "goal"]
+
+[term.proposition]
+title = "Proposition"
+kind = "concept"
+introduced_in = "ch01"
+summary = "A statement that can be true or false, like `2 + 2 = 4`. In Lean, propositions have type `Prop`."
+explanation = """
+A proposition is a statement that can be proved (or not). `2 + 2 = 4` and
+`2 + 2 = 5` are both propositions; only the first one has a proof.
+
+In Lean, every proposition is a term of type `Prop`:
+
+```lean output="Prop"
+#check 2 + 2 = 4
+```
+
+Lean prints `2 + 2 = 4 : Prop`.
+"""
+see_also = ["proof", "prop", "theorem"]
+
+[term.proof]
+title = "Proof"
+kind = "concept"
+introduced_in = "ch01"
+summary = "Evidence that a proposition is true. Lean checks proofs mechanically."
+explanation = """
+A proof of a proposition `P` is evidence that `P` is true. In Lean, a proof of
+`P` is a term whose type is `P`. When you write `hp : P`, read it as "`hp` is a
+proof of `P`".
+
+You usually build proofs with [[tactic|tactics]], but a proof can also be
+written directly as a term.
+"""
+see_also = ["proposition", "type", "curry_howard"]
+
+[term.theorem]
+title = "theorem"
+kind = "command"
+introduced_in = "ch01"
+summary = "Declares a named statement together with its proof: `theorem name : statement := proof`."
+explanation = """
+`theorem` states a proposition, gives it a name, and proves it:
+
+```lean
+theorem two_plus_two : 2 + 2 = 4 := by
+  rfl
+```
+
+Assumptions go between the name and the colon, for example
+`theorem use_it (P Q : Prop) (hp : P) (hq : Q) : Q`. Once proved, you can
+use a theorem by name in later proofs.
+"""
+see_also = ["example", "hypothesis", "proposition"]
+code_tokens = ["theorem"]
+
+[term.goal]
+title = "Goal"
+kind = "concept"
+introduced_in = "ch01"
+summary = "What you still have to prove. Shown after `⊢` in the infoview."
+explanation = """
+The goal is the proposition you still need to prove at the current point in
+a proof. The infoview shows it after the `⊢` symbol:
+
+```text
+P Q : Prop
+hp : P
+hq : Q
+⊢ Q
+```
+
+Here the goal is `Q`. Tactics change the goal or close it. When every goal is
+closed, the infoview shows **No goals** and the proof is complete.
+"""
+see_also = ["hypothesis", "context", "turnstile", "tactic"]
+
+[term.hypothesis]
+title = "Hypothesis"
+kind = "concept"
+introduced_in = "ch01"
+summary = "Something you may assume while proving: a named proof, like `hp : P`, listed above the `⊢`."
+explanation = """
+A hypothesis is an assumption you're allowed to use. In
+`theorem use_it (P Q : Prop) (hp : P) (hq : Q) : Q`, the hypothesis `hp` is a
+proof of `P` and `hq` is a proof of `Q`.
+
+Hypotheses appear above the `⊢` in the infoview, one per line, as
+`name : proposition`. Names starting with `h` are a common convention.
+"""
+see_also = ["goal", "context", "exact"]
+
+[term.context]
+title = "Context"
+kind = "concept"
+introduced_in = "ch01"
+summary = "Everything listed above the `⊢`: the variables and hypotheses available to you."
+explanation = """
+The context is the part of the goal display above the `⊢`. It lists
+variables (like `P Q : Prop` or `n : Nat`) and hypotheses (like `hp : P`).
+Everything in the context can be used to prove the goal.
+"""
+see_also = ["goal", "hypothesis"]
+
+[term.tactic]
+title = "Tactic"
+kind = "concept"
+introduced_in = "ch01"
+summary = "An instruction that moves a proof forward, like `rfl` or `exact hq`."
+explanation = """
+A tactic is a command used in [[tactic_mode|tactic mode]] (after `by`). Each
+tactic transforms the current goal: it might close it, change it, or split it
+into several smaller goals. A tactic proof is a sequence of tactics, usually
+one per line.
+
+Tactics introduced so far: `rfl`, `exact`.
+"""
+see_also = ["tactic_mode", "goal", "rfl", "exact"]
+
+[term.tactic_mode]
+title = "Tactic mode"
+kind = "concept"
+introduced_in = "ch01"
+summary = "Writing a proof as a sequence of tactics, started with `by`."
+explanation = """
+After `:= by`, Lean expects a sequence of [[tactic|tactics]] instead of a
+proof term. Lean runs them one after another, showing the goal after each one
+in the infoview.
+
+```lean
+theorem two_plus_two : 2 + 2 = 4 := by
+  rfl
+```
+
+Behind the scenes, tactics construct a proof term for you. Writing the term
+yourself is called [[term_mode|term mode]].
+"""
+see_also = ["tactic", "term_mode"]
+code_tokens = ["by"]
+
+[term.term_mode]
+title = "Term mode"
+kind = "concept"
+introduced_in = "ch01"
+summary = "Writing a proof directly as a term, without `by`, e.g. `theorem t : 2 + 2 = 4 := rfl`."
+explanation = """
+In term mode you write the proof itself rather than instructions for building
+it:
+
+```lean
+theorem two_plus_two : 2 + 2 = 4 := rfl
+```
+
+Tactic mode and term mode can be mixed freely. Leanlings mostly uses tactic
+mode, because the infoview shows you the goal at every step.
+"""
+see_also = ["tactic_mode", "curry_howard"]
+
+[term.infoview]
+title = "Infoview"
+kind = "concept"
+introduced_in = "ch01"
+summary = "The panel that shows the goals and hypotheses at your cursor, plus messages."
+explanation = """
+The infoview is the panel on the right of the editor. As you move your cursor
+through a proof, it shows the current [[context]] and [[goal]] at that point,
+and any errors or warnings. Watching it is the main way to understand what a
+tactic did.
+"""
+see_also = ["goal", "context"]
+
+[term.definitional_equality]
+title = "Definitional equality"
+kind = "concept"
+introduced_in = "ch01"
+summary = "Two expressions are definitionally equal when Lean can compute or unfold both to the same thing. That's what `rfl` checks."
+explanation = """
+Two expressions are definitionally equal when Lean can show they're the same
+by computing and unfolding definitions, without any further reasoning.
+`2 + 2` and `4` are definitionally equal, so `rfl` proves `2 + 2 = 4`.
+
+Some true equations are *not* definitional. With a variable `n : Nat`,
+`n + 0 = n` is definitional, but `0 + n = n` is not, because of how addition is
+defined. Proving the second one needs induction (Chapter 8).
+
+```lean error="is not definitionally equal"
+example (n : Nat) : 0 + n = n := by
+  rfl
+```
+"""
+see_also = ["rfl", "nat"]
+
+[term.type]
+title = "Type"
+kind = "concept"
+introduced_in = "ch01"
+summary = "Every Lean term has a type, written `term : type`. For a proof, the type is the proposition it proves."
+explanation = """
+Every expression in Lean has a type. `3 : Nat` says `3` is a natural number.
+`hp : P` says `hp` has type `P`. When `P` is a proposition, that means `hp`
+is a proof of `P`.
+
+`#check` shows the type of any expression:
+
+```lean output="Nat"
+#check 3
+```
+"""
+see_also = ["prop", "proof", "check", "curry_howard"]
+
+[term.curry_howard]
+title = "Curry–Howard correspondence"
+kind = "concept"
+introduced_in = "ch01"
+summary = "The match between logic and programming: propositions are types, and proofs are programs of those types."
+explanation = """
+Under the Curry–Howard correspondence (also called *propositions as types*),
+a proposition corresponds to a type and a proof corresponds to a program
+(term) of that type. Checking a proof becomes checking a type.
+
+You've already seen the first half: `hq : Q` means `hq` is a proof of `Q`, in
+the same way `3 : Nat` means `3` is a natural number. Later chapters show more:
+a proof of an implication `P → Q` (Chapter 2) is a function, and a proof of
+`P ∧ Q` (Chapter 4) is a pair.
+
+It's named after Haskell Curry and William Howard. See the appendix article
+for the full story.
+"""
+see_also = ["type", "proof", "term_mode"]
+
+# ── Definitions & notation ───────────────────────────────────────────────
+
+[term.prop]
+title = "Prop"
+kind = "definition"
+introduced_in = "ch01"
+summary = "The type of propositions. `P : Prop` means `P` is a proposition."
+explanation = """
+`Prop` is the type whose members are propositions. In
+`theorem use_it (P Q : Prop) …`, the binder `(P Q : Prop)` says `P` and `Q` are
+propositions. We don't know which ones, so the proof must work for all of them.
+
+`Prop` is different from `Bool` (the type of the values `true` and `false`):
+a proposition is something you prove, not a value you compute.
+"""
+see_also = ["proposition", "type"]
+code_tokens = ["Prop"]
+
+[term.nat]
+title = "Nat"
+kind = "definition"
+introduced_in = "ch01"
+summary = "The natural numbers 0, 1, 2, …. Numerals like `2` default to `Nat`."
+explanation = """
+`Nat` is Lean's type of natural numbers: 0, 1, 2, and so on. When you write a
+numeral like `2 + 2 = 4` without saying otherwise, the numbers are `Nat`s.
+
+```lean output="Nat"
+#check (2 : Nat)
+```
+
+Chapter 8 shows how `Nat` is defined and how to prove things about all
+natural numbers by induction.
+"""
+see_also = ["definitional_equality"]
+code_tokens = ["Nat"]
+
+[term.turnstile]
+title = "⊢ (turnstile)"
+kind = "notation"
+introduced_in = "ch01"
+summary = "Marks the goal in the infoview. Read it as \"prove\"."
+explanation = """
+In the goal display, `⊢` separates the [[context]] (above) from the [[goal]]
+(after the symbol). `hp : P ⊢ Q` reads: "using `hp`, a proof of `P`, prove
+`Q`". You never need to type `⊢` yourself.
+"""
+see_also = ["goal", "context"]
+code_tokens = ["⊢"]
+
+# ── Tactics ──────────────────────────────────────────────────────────────
+
+[term.rfl]
+title = "rfl"
+kind = "tactic"
+introduced_in = "ch01"
+summary = "Proves `a = b` when both sides are equal by definition, e.g. `2 + 2 = 4`."
+explanation = """
+`rfl` (reflexivity) closes a goal `a = b` when `a` and `b` are
+[[definitional_equality|definitionally equal]]: Lean can compute or unfold
+both to the same thing.
+
+```lean
+example : (3 + 4) * 2 = 14 := by
+  rfl
+```
+
+If the sides aren't equal by definition, `rfl` fails and tells you so:
+
+```lean error="is not definitionally equal"
+example : 2 + 2 = 5 := by
+  rfl
+```
+
+`rfl` is also a term, the proof that anything equals itself, so
+`exact rfl` and the term-mode proof `:= rfl` work too.
+"""
+see_also = ["exact", "definitional_equality"]
+code_tokens = ["rfl"]
+
+[term.exact]
+title = "exact"
+kind = "tactic"
+introduced_in = "ch01"
+summary = "`exact h` closes the goal when `h` is a proof of exactly that goal."
+explanation = """
+`exact e` finishes the current goal using the proof `e`. Lean checks that the
+type of `e` matches the goal; if not, you get a `Type mismatch` error showing
+both.
+
+```lean
+theorem use_it (P Q : Prop) (hp : P) (hq : Q) : Q := by
+  exact hq
+```
+
+`e` can be a hypothesis, a theorem proved earlier, or a term like `rfl`.
+"""
+see_also = ["hypothesis", "rfl", "goal"]
+code_tokens = ["exact"]
+
+[term.sorry]
+title = "sorry"
+kind = "tactic"
+introduced_in = "ch01"
+summary = "A placeholder for a missing proof. Lean accepts it with a warning; Leanlings doesn't count it as solved."
+explanation = """
+`sorry` tells Lean "assume this is proved". It lets you leave a hole and keep
+working, and Lean warns that the declaration uses `sorry` so you don't forget.
+
+```lean output="declaration uses"
+theorem later : 2 + 2 = 4 := by
+  sorry
+```
+
+Every Leanlings exercise starts with a `sorry` for you to replace.
+"""
+see_also = ["proof"]
+code_tokens = ["sorry"]
+
+# ── Commands ─────────────────────────────────────────────────────────────
+
+[term.example]
+title = "example"
+kind = "command"
+introduced_in = "ch01"
+summary = "Like `theorem`, but without a name: handy for quick experiments."
+explanation = """
+`example` states and proves something without naming it, so you can't refer
+to it later. Useful for trying things out.
+
+```lean
+example : 3 * 3 = 9 := by
+  rfl
+```
+"""
+see_also = ["theorem"]
+code_tokens = ["example"]
+
+[term.check]
+title = "#check"
+kind = "command"
+introduced_in = "ch01"
+summary = "Shows the type of an expression. For a theorem, that's the statement it proves."
+explanation = """
+`#check e` displays `e : T`, where `T` is the type of `e`.
+
+```lean output="two_plus_two : 2 + 2 = 4"
+theorem two_plus_two : 2 + 2 = 4 := by
+  rfl
+
+#check two_plus_two
+```
+"""
+see_also = ["type", "theorem"]
+code_tokens = ["#check"]

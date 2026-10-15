@@ -1,0 +1,153 @@
+# Leanlings curriculum: chapters, appendix and exercises, in order.
+# Format and rules: docs/curriculum/CURRICULUM.md. Authoring workflow: the
+# `curriculum` skill. Verify with `npm run verify:curriculum`.
+
+# ── Chapters ─────────────────────────────────────────────────────────────
+
+[[chapter]]
+id = "ch01"
+number = 1
+title = "Hello, Proofs"
+summary = "Theorems, goals and hypotheses; your first tactics, rfl and exact."
+doc = "Chapters/01_hello/chapter.md"
+quiz = "Chapters/01_hello/quiz.toml"
+banned = [
+  "grind", "omega", "simp", "simp_all", "simpa", "decide", "native_decide",
+  "trivial", "assumption", "exact?", "apply?", "rw?", "simp?",
+]
+
+[[chapter]]
+id = "ch02"
+number = 2
+title = "Implication"
+summary = "→ as a function from proofs to proofs: intro, apply, assumption."
+placeholder = true
+
+[[chapter]]
+id = "ch03"
+number = 3
+title = "Rewriting"
+summary = "Using equalities: rw, rw [← h], rw … at h, calc."
+placeholder = true
+
+[[chapter]]
+id = "ch04"
+number = 4
+title = "And & Iff"
+summary = "Building and taking apart pairs: constructor, obtain, ⟨_, _⟩."
+placeholder = true
+
+[[chapter]]
+id = "ch05"
+number = 5
+title = "Or"
+summary = "Case analysis: left, right, rcases."
+placeholder = true
+
+[[chapter]]
+id = "ch06"
+number = 6
+title = "Negation & False"
+summary = "¬p is p → False: exfalso, contradiction, by_cases."
+placeholder = true
+
+[[chapter]]
+id = "ch07"
+number = 7
+title = "Quantifiers"
+summary = "∀ as a function, ∃ as a pair: specialize, exists, obtain."
+placeholder = true
+
+[[chapter]]
+id = "ch08"
+number = 8
+title = "Natural numbers & induction"
+summary = "How Nat is defined, and proofs by induction."
+placeholder = true
+
+[[chapter]]
+id = "ch09"
+number = 9
+title = "Lists & recursive functions"
+summary = "Proving facts about programs."
+placeholder = true
+
+[[chapter]]
+id = "ch10"
+number = 10
+title = "Automation, responsibly"
+summary = "simp, omega, decide, grind and exact?: when to let the machine finish."
+placeholder = true
+
+[[chapter]]
+id = "ch11"
+number = 11
+title = "Capstone"
+summary = "Mixed problems using everything so far."
+placeholder = true
+
+# ── Appendix ─────────────────────────────────────────────────────────────
+
+[[appendix]]
+id = "curry_howard"
+title = "The Curry–Howard correspondence"
+summary = "Why proofs are programs and propositions are types."
+doc = "Appendix/curry_howard.md"
+
+[[appendix]]
+id = "learn_more"
+title = "Where to learn more"
+summary = "Books, games and communities for your next steps."
+doc = "Appendix/learn_more.md"
+
+# ── Exercises ────────────────────────────────────────────────────────────
+
+[[exercise]]
+id = "ch01_rfl"
+chapter = "ch01"
+title = "Hello, rfl"
+path = "Exercises/01_hello/rfl.lean"
+theorem = "two_plus_two"
+statement = "2 + 2 = 4"
+description = "Look at the finished example first, then prove that `2 + 2 = 4`."
+hint = "Do what the example above does: replace `sorry` with `rfl`."
+
+[[exercise]]
+id = "ch01_compute"
+chapter = "ch01"
+title = "Computation counts"
+path = "Exercises/01_hello/compute.lean"
+theorem = "seven_times_two"
+statement = "(3 + 4) * 2 = 10 + 4"
+description = "Both sides of this equation involve arithmetic, on both the left and the right."
+hint = "Which tactic proved `2 + 2 = 4`? It computes *both* sides before comparing them."
+
+[[exercise]]
+id = "ch01_exact"
+chapter = "ch01"
+title = "Using a hypothesis"
+path = "Exercises/01_hello/exact.lean"
+theorem = "use_hypothesis"
+statement = "∀ (P Q : Prop), P → Q → Q"
+description = "The goal isn't an equation this time, so `rfl` won't help. Look at your [[hypothesis|hypotheses]]."
+hint = "The goal is `Q`. Which hypothesis has type `Q`? Write `exact` followed by its name."
+
+[[exercise]]
+id = "ch01_reuse"
+chapter = "ch01"
+title = "Reuse a theorem"
+path = "Exercises/01_hello/reuse.lean"
+theorem = "big_square"
+statement = "10 * 10 = 100"
+description = "A theorem you've proved is a proof you can hand to `exact`. Use `hundred` instead of computing again."
+hint = "`hundred` has type `10 * 10 = 100`, which is exactly the goal."
+
+[[exercise]]
+id = "ch01_fix"
+chapter = "ch01"
+title = "Read the error"
+path = "Exercises/01_hello/fix.lean"
+theorem = "pick_the_right_one"
+statement = "∀ (P Q R : Prop), P → Q → R → R"
+description = "This proof has a mistake. Read Lean's error message: it tells you what was given and what was expected."
+hint = "Compare the type in the error message with the goal. Which hypothesis has the type the goal needs?"

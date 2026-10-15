@@ -1,0 +1,229 @@
+# Chapter 1 quiz. Every option's explanation is shown after answering.
+# Keep correct options about as long as the distractors (no length cues).
+
+[[question]]
+id = "goal_display"
+kind = "single"
+prompt = """
+You put your cursor at the start of the proof of this theorem:
+
+```lean
+theorem q1 (P Q : Prop) (hp : P) (hq : Q) : P := by
+  sorry
+```
+
+What appears after the `⊢` in the infoview?
+"""
+
+[[question.option]]
+text = "`P`"
+correct = true
+explanation = "The goal is the statement after the last colon: `P`. The hypotheses `hp` and `hq` are listed above the `⊢`."
+
+[[question.option]]
+text = "`Q`"
+explanation = "`Q` is the type of the hypothesis `hq`, which sits above the `⊢`. The goal is what comes after the last colon in the theorem: `P`."
+
+[[question.option]]
+text = "`hp : P`"
+explanation = "That's a hypothesis, listed above the `⊢`. Below it is only the proposition still to prove: `P`."
+
+[[question.option]]
+text = "`P Q : Prop`"
+explanation = "That line is part of the context above the `⊢`: it says `P` and `Q` are propositions. The goal is `P`."
+
+[[question]]
+id = "which_tactic"
+kind = "single"
+prompt = """
+The infoview shows:
+
+```text
+P Q : Prop
+hp : P
+hq : Q
+⊢ Q
+```
+
+Which tactic finishes the proof?
+"""
+
+[[question.option]]
+text = "`rfl`"
+explanation = "`rfl` proves equations like `a = b`. The goal `Q` isn't an equation, so `rfl` fails (Lean says it expected a binary relation)."
+
+[[question.option]]
+text = "`exact hp`"
+explanation = "`hp` is a proof of `P`, not `Q`. Lean would report a `Type mismatch`."
+
+[[question.option]]
+text = "`exact hq`"
+correct = true
+explanation = "`hq` has type `Q`, which is exactly the goal."
+
+[[question.option]]
+text = "`exact Q`"
+explanation = "`Q` is the proposition itself, not a proof of it. Its type is `Prop`, so Lean reports a `Type mismatch`. You need something whose type is `Q`, like `hq`."
+
+[[question]]
+id = "rfl_which"
+kind = "multi"
+prompt = """
+Which of these goals can `rfl` close on its own? Select all that apply.
+(`n` is a natural number variable, and in the last option the context contains `hq : Q`.)
+"""
+
+[[question.option]]
+text = "`⊢ 2 + 2 = 4`"
+correct = true
+explanation = "Both sides compute to `4`."
+
+[[question.option]]
+text = "`⊢ (3 + 4) * 2 = 14`"
+correct = true
+explanation = "Both sides compute to `14`."
+
+[[question.option]]
+text = "`⊢ 2 + 2 = 5`"
+explanation = "The sides compute to different numbers. Lean reports that `2 + 2` is not definitionally equal to `5`. No tactic can prove a false statement."
+
+[[question.option]]
+text = "`⊢ n + 0 = n`"
+correct = true
+explanation = "Addition looks at the number on the right, and adding `0` gives back `n`, so both sides are equal by definition."
+
+[[question.option]]
+text = "`⊢ 0 + n = n`"
+explanation = "True, but not by computation: the number on the right is the unknown `n`, so Lean can't compute `0 + n`. You'll prove it in Chapter 8."
+
+[[question.option]]
+text = "`⊢ Q`"
+explanation = "`rfl` proves equations (`a = a`), and `Q` isn't one. `rfl` doesn't look at your hypotheses. Use `exact hq` here."
+
+[[question]]
+id = "type_mismatch"
+kind = "single"
+prompt = """
+Lean shows this error at your `exact` line:
+
+```text
+Type mismatch
+  hp
+has type
+  P
+but is expected to have type
+  Q
+```
+
+What does it mean?
+"""
+
+[[question.option]]
+text = "You gave a proof of `P` where a proof of `Q` was needed."
+correct = true
+explanation = "`hp : P` is a proof of `P`. `exact` checks the type of what you give it against the goal, and `P` isn't `Q`. Look for a hypothesis whose type is `Q`."
+
+[[question.option]]
+text = "The theorem's statement is false and can't be proved."
+explanation = "The error is about this step, not the statement. A different hypothesis may prove the goal just fine."
+
+[[question.option]]
+text = "`hp` was never defined, so Lean can't find it."
+explanation = "Lean knows `hp` well: it tells you its type is `P`. An undefined name gives a different error, `Unknown identifier`."
+
+[[question.option]]
+text = "`P` and `Q` are the same, but Lean got confused."
+explanation = "`P` and `Q` are two possibly different propositions. Lean can't assume they're equal, so a proof of one isn't a proof of the other."
+
+[[question]]
+id = "hypothesis_meaning"
+kind = "single"
+prompt = "In the context, you see the line `hq : Q`. What does it tell you?"
+
+[[question.option]]
+text = "`hq` is a proof of `Q` that you can use."
+correct = true
+explanation = "Read `hq : Q` as \"`hq` has type `Q`\". For a proposition `Q`, that means `hq` is a proof of `Q`."
+
+[[question.option]]
+text = "`Q` is still to be proved, under the name `hq`."
+explanation = "Things still to prove appear after `⊢`. Lines above the `⊢` are hypotheses: things you already have."
+
+[[question.option]]
+text = "`hq` and `Q` are two names for the same thing."
+explanation = "The colon means \"has type\", not equality. Equality is written with `=`."
+
+[[question.option]]
+text = "`hq` is a true/false value that is currently true."
+explanation = "`hq` is a proof, not a true/false value. Propositions (`Prop`) and true/false values are different things in Lean."
+
+[[question]]
+id = "exact_number"
+kind = "single"
+prompt = """
+To prove `5 * 4 = 20`, someone writes:
+
+```lean error="numerals are data"
+theorem q5 : 5 * 4 = 20 := by
+  exact 20
+```
+
+Why does Lean reject it?
+"""
+
+[[question.option]]
+text = "`20` is a number, not a proof of `5 * 4 = 20`."
+correct = true
+explanation = "`exact` needs a proof of the goal, and Lean says numerals are data while the goal is a proposition. `rfl` (or `exact rfl`) proves it."
+
+[[question.option]]
+text = "`5 * 4 = 20` is false, so nothing can prove it."
+explanation = "It's true: `5 * 4` computes to `20`, so `rfl` proves it. The problem is what was handed to `exact`."
+
+[[question.option]]
+text = "`exact` only accepts hypotheses, never theorems or terms."
+explanation = "`exact` accepts any proof of the goal, including `rfl` and theorems proved earlier. The problem is that `20` isn't a proof."
+
+[[question]]
+id = "finished"
+kind = "multi"
+prompt = """
+Four attempts at the same exercise end with these messages from Lean. Which
+attempts are finished, correct proofs? Select all that apply.
+"""
+
+[[question.option]]
+text = "No messages at all, and the infoview shows **No goals** at the end."
+correct = true
+explanation = "Nothing left to prove and nothing to complain about: done."
+
+[[question.option]]
+text = "Only the warning ``declaration uses `sorry` ``."
+explanation = "`sorry` is a placeholder. The warning means part of the proof is missing, so the theorem isn't proved yet."
+
+[[question.option]]
+text = "Only the warning ``Variable name `hp` is not explicitly referenced.``"
+correct = true
+explanation = "This is a style hint about an unused hypothesis. The proof itself is complete and correct."
+
+[[question.option]]
+text = "Only the error `Type mismatch` on the `exact` line."
+explanation = "An error means Lean rejected a step. The proof isn't accepted until it's fixed."
+
+[[question]]
+id = "no_goals"
+kind = "single"
+prompt = "After your last tactic, the infoview shows **No goals**. What does that mean?"
+
+[[question.option]]
+text = "There's nothing left to prove at that point."
+correct = true
+explanation = "Each tactic works on the goal; when none remain, every part of the statement has been proved."
+
+[[question.option]]
+text = "Lean couldn't work out what you're trying to prove."
+explanation = "When Lean can't understand something, you get an error message. **No goals** is the good outcome."
+
+[[question.option]]
+text = "There's an error you must fix before Lean shows the goal."
+explanation = "Errors are shown as messages, and the goal display still works around them. **No goals** means the proof is complete."

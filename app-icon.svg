@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Leanlings app icon: the Lean ∀ mark (from vscode-lean4's lean-mini.svg),
+       redrawn with heavier strokes on a rounded tile so it reads at small sizes.
+       Regenerate platform icons with: npx tauri icon app-icon.svg -->
+  <rect x="32" y="32" width="960" height="960" rx="200" fill="#1e2a44"/>
+  <g fill="none" stroke="#ffffff" stroke-width="80" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M300 260 L512 764 L724 260"/>
+    <path d="M408 517 H617"/>
+  </g>
+</svg>
