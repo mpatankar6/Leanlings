@@ -27,7 +27,9 @@ struct AppState {
 
 impl AppState {
     fn exercise(&self, id: &str) -> Result<&Exercise, String> {
-        self.curriculum.exercise(id).ok_or_else(|| format!("unknown exercise `{id}`"))
+        self.curriculum
+            .exercise(id)
+            .ok_or_else(|| format!("unknown exercise `{id}`"))
     }
 
     fn update_progress(&self, f: impl FnOnce(&mut Progress) -> bool) -> Result<(), String> {
@@ -123,11 +125,7 @@ fn reset_exercise(state: State<'_, AppState>, id: String) -> Result<String, Stri
 }
 
 #[tauri::command]
-async fn check_exercise(
-    state: State<'_, AppState>,
-    id: String,
-    content: String,
-) -> Result<CheckResult, String> {
+async fn check_exercise(state: State<'_, AppState>, id: String, content: String) -> Result<CheckResult, String> {
     let ex = state.exercise(&id)?;
     let banned = state.curriculum.banned_for(ex);
     let result = exercises::check(&state.workspace, ex, &content, banned).await?;
@@ -155,7 +153,12 @@ pub fn run() {
             let ws_url = format!("ws://127.0.0.1:{}/{token}", listener.local_addr()?.port());
             #[cfg(debug_assertions)]
             eprintln!("[leanlings] LSP bridge listening on {ws_url}");
-            tauri::async_runtime::spawn(lsp_bridge::serve(listener, workspace.clone(), token, app.handle().clone()));
+            tauri::async_runtime::spawn(lsp_bridge::serve(
+                listener,
+                workspace.clone(),
+                token,
+                app.handle().clone(),
+            ));
 
             app.manage(AppState {
                 pristine,

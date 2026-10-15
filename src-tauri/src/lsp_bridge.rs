@@ -19,9 +19,9 @@ use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::process::Command;
+use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::tungstenite::handshake::server::{ErrorResponse, Request, Response};
 use tokio_tungstenite::tungstenite::http::StatusCode;
-use tokio_tungstenite::tungstenite::Message;
 
 type BoxError = Box<dyn Error + Send + Sync>;
 
@@ -40,17 +40,26 @@ pub enum LeanStatus {
     /// The server answered `initialize`.
     Initialized,
     /// Lean is elaborating a file; `progress` is 0.0–1.0.
-    Processing { uri: String, progress: f64 },
+    Processing {
+        uri: String,
+        progress: f64,
+    },
     /// Lean finished elaborating a file.
-    FileReady { uri: String },
-    Error { message: String },
+    FileReady {
+        uri: String,
+    },
+    Error {
+        message: String,
+    },
 }
 
 /// Accept connections forever. Only requests to `/<token>` are accepted, so
 /// other local processes and web pages can't drive the Lean server.
 pub async fn serve(listener: TcpListener, workspace: PathBuf, token: String, app: AppHandle) {
     loop {
-        let Ok((stream, _)) = listener.accept().await else { continue };
+        let Ok((stream, _)) = listener.accept().await else {
+            continue;
+        };
         let (workspace, token, app) = (workspace.clone(), token.clone(), app.clone());
         tokio::spawn(async move {
             if let Err(e) = handle(stream, &workspace, &token, &app).await {
@@ -60,6 +69,8 @@ pub async fn serve(listener: TcpListener, workspace: PathBuf, token: String, app
     }
 }
 
+// The handshake callback's `Err` type (an HTTP response) is fixed by tungstenite.
+#[allow(clippy::result_large_err)]
 async fn handle(stream: TcpStream, workspace: &Path, token: &str, app: &AppHandle) -> Result<(), BoxError> {
     let emit = |status: LeanStatus| {
         let _ = app.emit("lean-status", status);
@@ -88,7 +99,9 @@ async fn handle(stream: TcpStream, workspace: &Path, token: &str, app: &AppHandl
     emit(LeanStatus::Spawning);
     let mut child = cmd.spawn().map_err(|e| {
         let message = format!("Could not start `lake serve` (is elan installed and on PATH?): {e}");
-        emit(LeanStatus::Error { message: message.clone() });
+        emit(LeanStatus::Error {
+            message: message.clone(),
+        });
         message
     })?;
     let mut stdin = child.stdin.take().expect("piped stdin");
@@ -107,7 +120,9 @@ async fn handle(stream: TcpStream, workspace: &Path, token: &str, app: &AppHandl
                     observe_client(&value, &line_counts, &emit);
                     mapper.to_server(&mut value);
                     let body = serde_json::to_string(&value)?;
-                    stdin.write_all(format!("Content-Length: {}\r\n\r\n", body.len()).as_bytes()).await?;
+                    stdin
+                        .write_all(format!("Content-Length: {}\r\n\r\n", body.len()).as_bytes())
+                        .await?;
                     stdin.write_all(body.as_bytes()).await?;
                     stdin.flush().await?;
                 }
@@ -125,7 +140,9 @@ async fn handle(stream: TcpStream, workspace: &Path, token: &str, app: &AppHandl
             observe_server(&value, &line_counts, &emit);
             ws_tx.send(Message::Text(serde_json::to_string(&value)?.into())).await?;
         }
-        emit(LeanStatus::Error { message: "The Lean server stopped unexpectedly.".into() });
+        emit(LeanStatus::Error {
+            message: "The Lean server stopped unexpectedly.".into(),
+        });
         Ok::<_, BoxError>(())
     };
 
@@ -145,7 +162,10 @@ fn observe_client(msg: &Value, line_counts: &Mutex<HashMap<String, usize>>, emit
         Some("textDocument/didOpen") => {
             let doc = &params["textDocument"];
             if let (Some(uri), Some(text)) = (doc["uri"].as_str(), doc["text"].as_str()) {
-                line_counts.lock().unwrap().insert(uri.to_string(), text.lines().count().max(1));
+                line_counts
+                    .lock()
+                    .unwrap()
+                    .insert(uri.to_string(), text.lines().count().max(1));
             }
         }
         Some("textDocument/didChange") => {
@@ -154,8 +174,14 @@ fn observe_client(msg: &Value, line_counts: &Mutex<HashMap<String, usize>>, emit
             let full = params["contentChanges"]
                 .as_array()
                 .and_then(|changes| changes.iter().rev().find(|c| c.get("range").is_none()));
-            if let (Some(uri), Some(text)) = (params["textDocument"]["uri"].as_str(), full.and_then(|c| c["text"].as_str())) {
-                line_counts.lock().unwrap().insert(uri.to_string(), text.lines().count().max(1));
+            if let (Some(uri), Some(text)) = (
+                params["textDocument"]["uri"].as_str(),
+                full.and_then(|c| c["text"].as_str()),
+            ) {
+                line_counts
+                    .lock()
+                    .unwrap()
+                    .insert(uri.to_string(), text.lines().count().max(1));
             }
         }
         _ => {}
@@ -172,7 +198,9 @@ fn observe_server(msg: &Value, line_counts: &Mutex<HashMap<String, usize>>, emit
         return;
     }
     let params = &msg["params"];
-    let Some(uri) = params["textDocument"]["uri"].as_str() else { return };
+    let Some(uri) = params["textDocument"]["uri"].as_str() else {
+        return;
+    };
     let processing = params["processing"].as_array().map(Vec::as_slice).unwrap_or_default();
     // Lean reports the ranges still being processed; the earliest start line
     // is how far it has got.
@@ -185,7 +213,10 @@ fn observe_server(msg: &Value, line_counts: &Mutex<HashMap<String, usize>>, emit
         Some(line) => {
             let total = line_counts.lock().unwrap().get(uri).copied().unwrap_or(1);
             let progress = (line as f64 / total as f64).clamp(0.0, 0.99);
-            emit(LeanStatus::Processing { uri: uri.to_string(), progress });
+            emit(LeanStatus::Processing {
+                uri: uri.to_string(),
+                progress,
+            });
         }
     }
 }

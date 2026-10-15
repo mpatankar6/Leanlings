@@ -69,10 +69,17 @@ impl Curriculum {
         let path = root.join("info.toml");
         let text = fs::read_to_string(&path).map_err(|e| format!("reading {}: {e}", path.display()))?;
         let info: InfoFile = toml::from_str(&text).map_err(|e| format!("parsing info.toml: {e}"))?;
-        let curriculum = Self { chapters: info.chapter, appendix: info.appendix, exercises: info.exercise };
+        let curriculum = Self {
+            chapters: info.chapter,
+            appendix: info.appendix,
+            exercises: info.exercise,
+        };
         for ex in &curriculum.exercises {
             if curriculum.chapter(&ex.chapter).is_none() {
-                return Err(format!("exercise `{}` refers to unknown chapter `{}`", ex.id, ex.chapter));
+                return Err(format!(
+                    "exercise `{}` refers to unknown chapter `{}`",
+                    ex.id, ex.chapter
+                ));
             }
             if !ex.placeholder && (ex.path.is_none() || ex.theorem.is_none() || ex.statement.is_none()) {
                 return Err(format!("exercise `{}` needs path, theorem and statement", ex.id));
@@ -92,7 +99,10 @@ impl Curriculum {
     pub fn banned_for<'a>(&'a self, ex: &'a Exercise) -> &'a [String] {
         match &ex.banned {
             Some(list) => list,
-            None => self.chapter(&ex.chapter).map(|c| c.banned.as_slice()).unwrap_or_default(),
+            None => self
+                .chapter(&ex.chapter)
+                .map(|c| c.banned.as_slice())
+                .unwrap_or_default(),
         }
     }
 }
@@ -241,7 +251,10 @@ mod tests {
     #[test]
     fn finds_banned_tactics_outside_comments() {
         let b = banned(&["decide", "simp", "exact?"]);
-        assert_eq!(find_banned("theorem t : 2 + 2 = 4 := by\n  decide\n", &b), Some("decide".into()));
+        assert_eq!(
+            find_banned("theorem t : 2 + 2 = 4 := by\n  decide\n", &b),
+            Some("decide".into())
+        );
         assert_eq!(find_banned("by exact?", &b), Some("exact?".into()));
         assert_eq!(find_banned("-- try decide\nby rfl", &b), None);
         assert_eq!(find_banned("/- simp /- nested -/ decide -/ by rfl", &b), None);

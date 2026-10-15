@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (types, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - name: Type-check
+        run: npx tsc --noEmit
+      - name: Build
+        run: npx vite build
+
+  backend:
+    name: Backend (fmt, clippy, tests) + curriculum
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev \
+            libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      # Tauri embeds the built frontend at compile time, so build it first.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - run: npx vite build
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Lean (elan)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.elan/toolchains
+          key: elan-${{ hashFiles('exercises/lean-toolchain') }}
+      - name: Install the pinned Lean toolchain
+        working-directory: exercises
+        run: lean --version
+
+      - name: rustfmt
+        working-directory: src-tauri
+        run: cargo fmt --check
+      - name: clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+      # Includes the ignored tests: the curriculum verifier, which compiles every
+      # Lean snippet and checks every exercise starter and reference solution.
+      - name: Tests + curriculum verification
+        working-directory: src-tauri
+        run: cargo test -- --include-ignored --test-threads=1

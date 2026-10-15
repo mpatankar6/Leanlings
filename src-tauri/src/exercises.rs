@@ -57,7 +57,11 @@ fn copy_tree(src: &Path, dst: &Path, root: &Path, manifest: &mut BTreeMap<String
             fs::copy(&from, &to)?;
             continue;
         }
-        let key = from.strip_prefix(root).unwrap_or(&from).to_string_lossy().replace('\\', "/");
+        let key = from
+            .strip_prefix(root)
+            .unwrap_or(&from)
+            .to_string_lossy()
+            .replace('\\', "/");
         let new = fnv1a(&fs::read(&from)?);
         let untouched = match fs::read(&to) {
             Err(_) => true, // missing
@@ -79,7 +83,9 @@ fn copy_tree(src: &Path, dst: &Path, root: &Path, manifest: &mut BTreeMap<String
 
 /// FNV-1a: a stable, dependency-free content hash (not for security).
 fn fnv1a(bytes: &[u8]) -> u64 {
-    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |h, b| (h ^ u64::from(*b)).wrapping_mul(0x0100_0000_01b3))
+    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |h, b| {
+        (h ^ u64::from(*b)).wrapping_mul(0x0100_0000_01b3)
+    })
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
@@ -125,12 +131,7 @@ pub struct CheckResult {
 /// Compile the learner's file with a hidden re-statement of the theorem and an
 /// axiom audit appended, so weakening the statement or using `sorry` fails.
 /// Tactics in `banned` are rejected before compiling.
-pub async fn check(
-    workspace: &Path,
-    ex: &Exercise,
-    content: &str,
-    banned: &[String],
-) -> Result<CheckResult, String> {
+pub async fn check(workspace: &Path, ex: &Exercise, content: &str, banned: &[String]) -> Result<CheckResult, String> {
     if let Some(tactic) = curriculum::find_banned(content, banned) {
         return Ok(CheckResult {
             passed: false,
@@ -148,9 +149,8 @@ pub async fn check(
     let dir = workspace.join(CHECK_DIR);
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let file: PathBuf = dir.join(format!("{}.lean", ex.id));
-    let source = format!(
-        "{content}\n\n-- leanlings check\nexample : {statement} := {theorem}\n#print axioms {theorem}\n"
-    );
+    let source =
+        format!("{content}\n\n-- leanlings check\nexample : {statement} := {theorem}\n#print axioms {theorem}\n");
     fs::write(&file, source).map_err(|e| e.to_string())?;
 
     let mut cmd = Command::new("lake");
@@ -174,16 +174,24 @@ pub async fn check(
     } else {
         match axioms_used(&output, theorem) {
             None => "Could not verify the proof.".to_string(),
-            Some(axioms) if axioms.iter().any(|a| a == "sorryAx") => {
-                "The proof still uses `sorry`.".to_string()
-            }
+            Some(axioms) if axioms.iter().any(|a| a == "sorryAx") => "The proof still uses `sorry`.".to_string(),
             Some(axioms) => match axioms.iter().find(|a| !ALLOWED_AXIOMS.contains(&a.as_str())) {
                 Some(bad) => format!("The proof depends on a disallowed axiom: `{bad}`."),
-                None => return Ok(CheckResult { passed: true, summary: "Solved!".into(), output }),
+                None => {
+                    return Ok(CheckResult {
+                        passed: true,
+                        summary: "Solved!".into(),
+                        output,
+                    });
+                }
             },
         }
     };
-    Ok(CheckResult { passed: false, summary, output })
+    Ok(CheckResult {
+        passed: false,
+        summary,
+        output,
+    })
 }
 
 /// Parse the output of `#print axioms`. `None` if the line is missing.

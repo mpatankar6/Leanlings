@@ -3,7 +3,7 @@
 //!
 //! See docs/curriculum/CURRICULUM.md for the rules being enforced.
 
-use crate::curriculum::{self, Curriculum, GlossaryEntry, Quiz, QuestionKind};
+use crate::curriculum::{self, Curriculum, GlossaryEntry, QuestionKind, Quiz};
 use crate::exercises;
 use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -44,7 +44,11 @@ fn load(errors: &mut Vec<String>) -> Option<Loaded> {
 
     for ch in curriculum.chapters.iter().filter(|c| !c.placeholder) {
         match ch.doc.as_deref().map(|d| (d, curriculum::read_doc(&root, d))) {
-            Some((d, Ok(text))) => docs.push(Doc { origin: d.into(), owner: ch.id.clone(), text }),
+            Some((d, Ok(text))) => docs.push(Doc {
+                origin: d.into(),
+                owner: ch.id.clone(),
+                text,
+            }),
             Some((d, Err(e))) => errors.push(format!("{}: {e} ({d})", ch.id)),
             None => errors.push(format!("chapter `{}` has no doc", ch.id)),
         }
@@ -52,10 +56,22 @@ fn load(errors: &mut Vec<String>) -> Option<Loaded> {
             Some((q, Ok(quiz))) => {
                 for question in &quiz.questions {
                     let origin = format!("{q}#{}", question.id);
-                    docs.push(Doc { origin: origin.clone(), owner: ch.id.clone(), text: question.prompt.clone() });
+                    docs.push(Doc {
+                        origin: origin.clone(),
+                        owner: ch.id.clone(),
+                        text: question.prompt.clone(),
+                    });
                     for opt in &question.options {
-                        docs.push(Doc { origin: origin.clone(), owner: ch.id.clone(), text: opt.text.clone() });
-                        docs.push(Doc { origin: origin.clone(), owner: ch.id.clone(), text: opt.explanation.clone() });
+                        docs.push(Doc {
+                            origin: origin.clone(),
+                            owner: ch.id.clone(),
+                            text: opt.text.clone(),
+                        });
+                        docs.push(Doc {
+                            origin: origin.clone(),
+                            owner: ch.id.clone(),
+                            text: opt.explanation.clone(),
+                        });
                     }
                 }
                 quizzes.push((ch.id.clone(), quiz));
@@ -66,21 +82,38 @@ fn load(errors: &mut Vec<String>) -> Option<Loaded> {
     }
     for art in &curriculum.appendix {
         match curriculum::read_doc(&root, &art.doc) {
-            Ok(text) => docs.push(Doc { origin: art.doc.clone(), owner: "appendix".into(), text }),
+            Ok(text) => docs.push(Doc {
+                origin: art.doc.clone(),
+                owner: "appendix".into(),
+                text,
+            }),
             Err(e) => errors.push(format!("appendix `{}`: {e}", art.id)),
         }
     }
     for ex in curriculum.exercises.iter().filter(|e| !e.placeholder) {
         for text in [&ex.description, &ex.hint].into_iter().flatten() {
-            docs.push(Doc { origin: format!("info.toml#{}", ex.id), owner: ex.chapter.clone(), text: text.clone() });
+            docs.push(Doc {
+                origin: format!("info.toml#{}", ex.id),
+                owner: ex.chapter.clone(),
+                text: text.clone(),
+            });
         }
     }
     for (id, entry) in &glossary {
         for text in [&entry.summary, &entry.explanation] {
-            docs.push(Doc { origin: format!("glossary.toml#{id}"), owner: String::new(), text: text.clone() });
+            docs.push(Doc {
+                origin: format!("glossary.toml#{id}"),
+                owner: String::new(),
+                text: text.clone(),
+            });
         }
     }
-    Some(Loaded { curriculum, glossary, quizzes, docs })
+    Some(Loaded {
+        curriculum,
+        glossary,
+        quizzes,
+        docs,
+    })
 }
 
 /// Strip blockquote markers (`> `), so fences inside quotes are found too.
@@ -184,12 +217,19 @@ fn glossary_refs(md: &str) -> Vec<String> {
 #[test]
 fn content_is_consistent() {
     let mut errors = Vec::new();
-    let Some(l) = load(&mut errors) else { panic!("{}", errors.join("\n")) };
+    let Some(l) = load(&mut errors) else {
+        panic!("{}", errors.join("\n"))
+    };
     let c = &l.curriculum;
 
     // Unique ids.
     let mut seen = HashSet::new();
-    let ids = c.chapters.iter().map(|x| &x.id).chain(c.appendix.iter().map(|x| &x.id)).chain(c.exercises.iter().map(|x| &x.id));
+    let ids = c
+        .chapters
+        .iter()
+        .map(|x| &x.id)
+        .chain(c.appendix.iter().map(|x| &x.id))
+        .chain(c.exercises.iter().map(|x| &x.id));
     for id in ids {
         if !seen.insert(id.clone()) {
             errors.push(format!("duplicate id `{id}`"));
@@ -211,9 +251,10 @@ fn content_is_consistent() {
                 errors.push(format!("{chapter}/{}: needs at least 2 options", q.id));
             }
             match q.kind {
-                QuestionKind::Single if correct != 1 => {
-                    errors.push(format!("{chapter}/{}: single-answer question has {correct} correct options", q.id))
-                }
+                QuestionKind::Single if correct != 1 => errors.push(format!(
+                    "{chapter}/{}: single-answer question has {correct} correct options",
+                    q.id
+                )),
                 QuestionKind::Multi if correct == 0 => errors.push(format!("{chapter}/{}: no correct options", q.id)),
                 _ => {}
             }
@@ -232,7 +273,10 @@ fn content_is_consistent() {
             errors.push(format!("glossary `{id}`: unknown kind `{}`", e.kind));
         }
         if e.introduced_in != "appendix" && !chapter_ids.contains(e.introduced_in.as_str()) {
-            errors.push(format!("glossary `{id}`: introduced_in `{}` is not a chapter", e.introduced_in));
+            errors.push(format!(
+                "glossary `{id}`: introduced_in `{}` is not a chapter",
+                e.introduced_in
+            ));
         }
         for s in &e.see_also {
             if !l.glossary.contains_key(s) {
@@ -255,13 +299,20 @@ fn content_is_consistent() {
 
     // `introduced_in` is the first place the term is mentioned
     // ([[ref]] or an inline-code token), in curriculum order.
-    let mut order: Vec<&str> = c.chapters.iter().filter(|x| !x.placeholder).map(|x| x.id.as_str()).collect();
+    let mut order: Vec<&str> = c
+        .chapters
+        .iter()
+        .filter(|x| !x.placeholder)
+        .map(|x| x.id.as_str())
+        .collect();
     order.push("appendix");
     for (id, e) in &l.glossary {
         let mentioned_in = |owner: &str| {
             l.docs.iter().filter(|d| d.owner == owner).any(|d| {
                 glossary_refs(&d.text).iter().any(|r| r == id)
-                    || inline_code(&d.text).iter().any(|s| e.code_tokens.iter().any(|t| t == s))
+                    || inline_code(&d.text)
+                        .iter()
+                        .any(|s| e.code_tokens.iter().any(|t| t == s))
             })
         };
         match order.iter().find(|o| mentioned_in(o)) {
@@ -281,10 +332,16 @@ fn content_is_consistent() {
             errors.push(format!("exercise `{}`: missing {}", ex.id, path.display()));
         }
         if !solutions_root().join(format!("{}.lean", ex.id)).exists() {
-            errors.push(format!("exercise `{}`: missing curriculum/solutions/{}.lean", ex.id, ex.id));
+            errors.push(format!(
+                "exercise `{}`: missing curriculum/solutions/{}.lean",
+                ex.id, ex.id
+            ));
         }
         if c.chapter(&ex.chapter).is_some_and(|ch| ch.placeholder) {
-            errors.push(format!("exercise `{}` belongs to placeholder chapter `{}`", ex.id, ex.chapter));
+            errors.push(format!(
+                "exercise `{}` belongs to placeholder chapter `{}`",
+                ex.id, ex.chapter
+            ));
         }
     }
 
@@ -297,8 +354,16 @@ fn run_lean(code: &str, name: &str) -> (bool, String) {
     std::fs::create_dir_all(&dir).unwrap();
     let file = dir.join(format!("{name}.lean"));
     std::fs::write(&file, code).unwrap();
-    let out = Command::new("lean").arg(&file).current_dir(content_root()).output().expect("could not run `lean`");
-    let text = format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+    let out = Command::new("lean")
+        .arg(&file)
+        .current_dir(content_root())
+        .output()
+        .expect("could not run `lean`");
+    let text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
     (out.status.success() && !text.contains(": error"), text)
 }
 
@@ -306,7 +371,9 @@ fn run_lean(code: &str, name: &str) -> (bool, String) {
 #[ignore = "calls Lean; run with --include-ignored"]
 fn lean_snippets_behave_as_annotated() {
     let mut errors = Vec::new();
-    let Some(l) = load(&mut errors) else { panic!("{}", errors.join("\n")) };
+    let Some(l) = load(&mut errors) else {
+        panic!("{}", errors.join("\n"))
+    };
     let mut count = 0;
     for doc in &l.docs {
         for (info, code, line) in code_blocks(&doc.text) {
@@ -345,7 +412,9 @@ fn lean_snippets_behave_as_annotated() {
 #[ignore = "calls Lean; run with --include-ignored"]
 fn starters_fail_and_solutions_pass() {
     let mut errors = Vec::new();
-    let Some(l) = load(&mut errors) else { panic!("{}", errors.join("\n")) };
+    let Some(l) = load(&mut errors) else {
+        panic!("{}", errors.join("\n"))
+    };
     let workspace = std::env::temp_dir().join("leanlings-verify-workspace");
     let _ = std::fs::remove_dir_all(&workspace);
     exercises::sync_workspace(&content_root(), &workspace).unwrap();
@@ -360,9 +429,14 @@ fn starters_fail_and_solutions_pass() {
         if r.passed {
             errors.push(format!("{}: the starter already passes", ex.id));
         }
-        let r = rt.block_on(exercises::check(&workspace, ex, &solution, banned)).unwrap();
+        let r = rt
+            .block_on(exercises::check(&workspace, ex, &solution, banned))
+            .unwrap();
         if !r.passed {
-            errors.push(format!("{}: reference solution fails: {}\n{}", ex.id, r.summary, r.output));
+            errors.push(format!(
+                "{}: reference solution fails: {}\n{}",
+                ex.id, r.summary, r.output
+            ));
         }
     }
     assert!(errors.is_empty(), "\n{}\n", errors.join("\n\n"));
