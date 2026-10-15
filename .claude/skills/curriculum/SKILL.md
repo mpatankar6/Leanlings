@@ -114,8 +114,7 @@ Read first, every time:
 
 ## Running the app for checks
 
-`npm run tauri dev`. To inspect it without touching the user's desktop, set
-`$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS='--remote-debugging-port=9333'`
-before launching, and drive the page over the Chrome DevTools Protocol
-(screenshots, `Runtime.evaluate`, synthetic input). Stop the instance when
-you're done, because the debug port should not be left open.
+Follow "Verifying UI changes in the real app" in the repo's `CLAUDE.md`:
+launch with the WebView2 debug port, keep every wait short and bounded, drive
+the page with `scripts/dev/cdp.mjs`, then stop the instance and undo any test
+progress.
