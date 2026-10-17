@@ -1,0 +1,19 @@
+/* Lean-specific editor decorations (see session.ts and abbreviations.ts). */
+
+/* Lines Lean is still elaborating, like VS Code's task gutter. */
+.lean-progress,
+.lean-progress-error {
+  margin-left: 2px;
+  width: 4px !important;
+}
+.lean-progress {
+  background: #f0b429;
+}
+.lean-progress-error {
+  background: #cd3131;
+}
+
+/* An abbreviation (`\to`) that is still being typed. */
+.lean-abbreviation {
+  text-decoration: underline;
+}

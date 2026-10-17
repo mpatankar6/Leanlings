@@ -339,7 +339,7 @@ button.link {
   opacity: 1;
 }
 
-/* lean4monaco renders the infoview in an iframe; make it fill the pane. */
+/* The infoview renders in an iframe (src/lean/infoview.ts); make it fill the pane. */
 .infoview iframe {
   display: block;
   width: 100%;

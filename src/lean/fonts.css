@@ -1,0 +1,6 @@
+/* Wide Unicode coverage for Lean's symbols. Imported by the app and the infoview iframe. */
+@font-face {
+  font-family: "JuliaMono";
+  src: url("./vendor/JuliaMono-Regular.ttf") format("truetype");
+  font-display: swap;
+}

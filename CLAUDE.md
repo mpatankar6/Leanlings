@@ -41,9 +41,13 @@ runs all of these on push/PR.
   `src-tauri/src/verify.rs`: the curriculum verifier (tests).
 - Frontend: `src/App.tsx` (views, sidebar, editor), `src/content/` (Markdown renderer
   with `[[glossary]]` terms, popovers/glossary page, quiz), `src/zoom.ts`, `src/Loading.tsx`.
-- Editor/infoview come from `lean4monaco` (depends on deprecated
-  `monaco-editor-wrapper`; we filed hhu-adam/lean4monaco#26 — wait for upstream
-  rather than migrating ourselves).
+- `src/lean/`: our own Lean editing layer (replaced lean4monaco): plain `monaco-editor`
+  with only the needed `features/*`, a small JSON-RPC client (`lspClient.ts`),
+  `session.ts` (sync, diagnostics, hover, semantic tokens, progress gutter),
+  TextMate highlighting with vscode-lean4's grammars (`highlight.ts`, `vendor/`),
+  `\to` abbreviations, and `@leanprover/infoview` in an iframe (`infoview.ts` host,
+  `frame.ts` + `infoview.html` inside, `channel.ts` between them).
+  Deliberately no completion, code actions or go-to-definition.
 
 ## Gotchas (learned the hard way)
 
@@ -52,11 +56,16 @@ runs all of these on push/PR.
   `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`.
   `Set-Content -Encoding utf8` writes a BOM — don't use it for content files;
   use the Write tool or `[IO.File]::WriteAllText` with `UTF8Encoding($false)`.
-- **Vite 8 + lean4monaco.** `vite.config.ts` has a Rolldown port of the
-  import-meta-url plugin; it must resolve *bare* specifiers (e.g.
-  `vscode-oniguruma/release/onig.wasm`) or TextMate highlighting silently breaks.
-  After changing it, delete `node_modules/.vite` (only when the app isn't running).
-  Infoview assets are copied to `/infoview/` with `stripBase`.
+- **Infoview files.** The `infoview-dist` plugin in `vite.config.ts` serves
+  `@leanprover/infoview/dist` at `/infoview/` unbundled — the iframe loads them via
+  an import map with the infoview's own React. Don't import them through Vite.
+- **TextMate grammars.** `lean4.json` includes `source.lean4.markdown`; if a
+  grammar's include can't be loaded, vscode-textmate silently drops that rule
+  (line comments stopped highlighting). Monaco styles one scope per token, so
+  `highlight.ts` picks the innermost *themed* scope.
+- **monaco-editor 0.57** maps `monaco-editor/*` to `esm/vs/*.js` (CSS isn't
+  importable; use `features/<name>/register`). It pins `dompurify`, overridden in
+  `package.json` for a security fix — drop the override when monaco catches up.
 - **Starter files reach existing workspaces** only if the learner hasn't edited
   them (`.leanlings_manifest.json` hashes). Workspaces created before the
   manifest keep old starters until reset.

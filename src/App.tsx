@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { LeanMonaco, LeanMonacoEditor } from "lean4monaco";
+import { Lean, LeanEditor } from "./lean";
 import { formatBytes, LoadingScreen, Prompt, Step, StepState } from "./Loading";
-import { Markdown, setLeanLanguageReady } from "./content/Markdown";
+import { Markdown } from "./content/Markdown";
 import { GlossaryPage, GlossaryProvider, Term } from "./content/Glossary";
 import { QuizView } from "./content/QuizView";
 import type { Chapter, CheckResult, Exercise, Progress, Snapshot, View } from "./types";
@@ -84,8 +84,8 @@ function App() {
 
   const editorEl = useRef<HTMLDivElement>(null);
   const infoviewEl = useRef<HTMLDivElement>(null);
-  const leanReady = useRef<Promise<void> | null>(null);
-  const editor = useRef<LeanMonacoEditor | null>(null);
+  const leanReady = useRef<Promise<Lean> | null>(null);
+  const editor = useRef<LeanEditor | null>(null);
 
   const chapters = snapshot?.curriculum.chapters ?? [];
   const playable = useMemo(() => snapshot?.curriculum.exercises.filter((e) => !e.placeholder) ?? [], [snapshot]);
@@ -207,23 +207,17 @@ function App() {
       .catch((e) => mark("toolchain", "error", { detail: String(e) }));
   }, [snapshot, mark]);
 
-  // Start the single LeanMonaco instance (LSP client + infoview).
+  // Connect to the Lean server and start the infoview (once).
   useEffect(() => {
     if (!snapshot || !toolchainReady || !infoviewEl.current) return;
-    const lean = new LeanMonaco();
-    lean.setInfoviewElement(infoviewEl.current);
-    mark("editor", "active", { detail: "Loading Monaco and the Lean extension…" });
-    leanReady.current = lean.start({
-      websocket: { url: snapshot.wsUrl },
-      htmlElement: editorEl.current ?? undefined,
-      vscode: { "editor.wordWrap": true },
-    });
-    setLeanLanguageReady(leanReady.current);
-    leanReady.current.then(
+    mark("editor", "active", { detail: "Loading the editor and infoview…" });
+    const started = Lean.start(snapshot.wsUrl, infoviewEl.current);
+    leanReady.current = started;
+    started.then(
       () => mark("editor", "done"),
       (e) => mark("editor", "error", { detail: String(e) }),
     );
-    return () => lean.dispose();
+    return () => void started.then((lean) => lean.dispose(), () => {});
   }, [snapshot, toolchainReady, mark]);
 
   // The last startup step: Lean has finished processing the first exercise.
@@ -266,22 +260,21 @@ function App() {
     const id = current.id;
     let cancelled = false;
     let timer: number | undefined;
-    const ed = new LeanMonacoEditor();
+    let ed: LeanEditor | null = null;
     setStatus({ kind: "idle" });
     setShowHint(false);
     setShowOutput(false);
 
     (async () => {
-      const [content] = await Promise.all([invoke<string>("read_exercise", { id }), leanReady.current]);
+      const [content, lean] = await Promise.all([invoke<string>("read_exercise", { id }), leanReady.current!]);
       if (cancelled) return;
-      await ed.start(el, `/${current.path}`, content);
-      if (cancelled) return;
-      editor.current = ed;
+      const opened = lean.openEditor(el, current.path!, content);
+      ed = editor.current = opened;
       setEditorOpenFor(current.path!);
       runCheck(id, content);
-      ed.editor.onDidChangeModelContent(() => {
+      opened.editor.onDidChangeModelContent(() => {
         window.clearTimeout(timer);
-        timer = window.setTimeout(() => runCheck(id, ed.editor.getValue()), CHECK_DELAY_MS);
+        timer = window.setTimeout(() => runCheck(id, opened.editor.getValue()), CHECK_DELAY_MS);
       });
     })().catch((e) => setStatus({ kind: "error", message: String(e) }));
 
@@ -289,7 +282,7 @@ function App() {
       cancelled = true;
       window.clearTimeout(timer);
       editor.current = null;
-      ed.dispose();
+      ed?.dispose();
     };
     // toolchainReady: leanReady is set once the toolchain is installed.
   }, [current, runCheck, toolchainReady]);

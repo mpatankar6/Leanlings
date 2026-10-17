@@ -7,7 +7,7 @@
 
 import { Fragment, ReactNode, useEffect, useState } from "react";
 import { Marked, Token, Tokens, TokenizerExtension } from "marked";
-import * as monaco from "monaco-editor";
+import { colorize } from "../lean";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Term, useGlossary } from "./Glossary";
 
@@ -28,12 +28,6 @@ const glossaryExtension: TokenizerExtension = {
 };
 
 const marked = new Marked({ gfm: true, extensions: [glossaryExtension] });
-
-/** Resolves once Lean syntax highlighting is available (set by App). */
-let leanLanguageReady: Promise<unknown> = new Promise(() => {});
-export function setLeanLanguageReady(p: Promise<unknown>) {
-  leanLanguageReady = p;
-}
 
 export function Markdown({ text, className }: { text: string; className?: string }) {
   const tokens = marked.lexer(text);
@@ -176,8 +170,7 @@ function CodeBlock({ info, code }: { info: string; code: string }) {
   useEffect(() => {
     if (!isLean) return;
     let cancelled = false;
-    leanLanguageReady
-      .then(() => monaco.editor.colorize(code, "lean4", { tabSize: 2 }))
+    colorize(code)
       .then((h) => !cancelled && setHtml(h))
       .catch(() => {});
     return () => {

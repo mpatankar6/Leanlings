@@ -18,8 +18,8 @@ articles and the glossary are written; chapters 2–11 are planned. See
 
 ## Features
 
-- **Editor:** Monaco with the Lean language server and the official Lean
-  infoview, via [lean4monaco](https://github.com/hhu-adam/lean4monaco).
+- **Editor:** Monaco with the Lean language server, `\to`-style Unicode input,
+  and the official [Lean infoview](https://www.npmjs.com/package/@leanprover/infoview).
 - **Chapters:** Markdown prose with glossary popovers and syntax-highlighted
   Lean examples, an optional quiz, and exercises that fade from guided to blank.
 - **Checking:** an exercise is solved when it compiles with no `sorry`, the
