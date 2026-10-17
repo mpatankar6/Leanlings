@@ -35,6 +35,10 @@ function infoviewDist(): Plugin {
 export default defineConfig(() => ({
   plugins: [react(), infoviewDist()],
   build: {
+    // The editor chunk (src/lean, dynamically imported) is ~3.5 MB, almost all
+    // Monaco, which can't be split usefully and loads from local disk. Every
+    // other chunk is far smaller, so this still flags real regressions.
+    chunkSizeWarningLimit: 4000,
     rolldownOptions: {
       input: { main: "index.html", infoview: "infoview.html" },
     },

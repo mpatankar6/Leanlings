@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Lean, LeanEditor } from "./lean";
+import type { Lean, LeanEditor } from "./lean";
 import { formatBytes, LoadingScreen, Prompt, Step, StepState } from "./Loading";
 import { Markdown } from "./content/Markdown";
 import { GlossaryPage, GlossaryProvider, Term } from "./content/Glossary";
@@ -211,7 +211,10 @@ function App() {
   useEffect(() => {
     if (!snapshot || !toolchainReady || !infoviewEl.current) return;
     mark("editor", "active", { detail: "Loading the editor and infoview…" });
-    const started = Lean.start(snapshot.wsUrl, infoviewEl.current);
+    const el = infoviewEl.current;
+    // Monaco is most of the app's code; load it only once Lean is needed so
+    // the shell and loading screen come up first.
+    const started = import("./lean").then(({ Lean }) => Lean.start(snapshot.wsUrl, el));
     leanReady.current = started;
     started.then(
       () => mark("editor", "done"),

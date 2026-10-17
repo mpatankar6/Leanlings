@@ -7,7 +7,6 @@
 
 import { Fragment, ReactNode, useEffect, useState } from "react";
 import { Marked, Token, Tokens, TokenizerExtension } from "marked";
-import { colorize } from "../lean";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Term, useGlossary } from "./Glossary";
 
@@ -170,7 +169,9 @@ function CodeBlock({ info, code }: { info: string; code: string }) {
   useEffect(() => {
     if (!isLean) return;
     let cancelled = false;
-    colorize(code)
+    // Loaded on demand: the editor module brings Monaco with it.
+    import("../lean")
+      .then(({ colorize }) => colorize(code))
       .then((h) => !cancelled && setHtml(h))
       .catch(() => {});
     return () => {
