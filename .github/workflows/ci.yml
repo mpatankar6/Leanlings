@@ -14,8 +14,8 @@ jobs:
     name: Frontend (types, build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/*
           cache: npm
@@ -29,7 +29,7 @@ jobs:
     name: Backend (fmt, clippy, tests) + curriculum
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Tauri system dependencies
         run: |
@@ -38,7 +38,7 @@ jobs:
             libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
       # Tauri embeds the built frontend at compile time, so build it first.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/*
           cache: npm
@@ -57,7 +57,7 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
             | sh -s -- -y --default-toolchain none
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.elan/toolchains
           key: elan-${{ hashFiles('exercises/lean-toolchain') }}
