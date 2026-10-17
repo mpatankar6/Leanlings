@@ -12,7 +12,7 @@ concurrency:
 jobs:
   frontend:
     name: Frontend (types, build)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -27,7 +27,7 @@ jobs:
 
   backend:
     name: Backend (fmt, clippy, tests) + curriculum
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
 
