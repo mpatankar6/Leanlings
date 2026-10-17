@@ -1,6 +1,7 @@
 mod curriculum;
 mod exercises;
 mod lsp_bridge;
+mod toolchain;
 #[cfg(test)]
 mod verify;
 
@@ -135,6 +136,16 @@ async fn check_exercise(state: State<'_, AppState>, id: String, content: String)
     Ok(result)
 }
 
+#[tauri::command]
+async fn toolchain_status(state: State<'_, AppState>) -> Result<toolchain::ToolchainStatus, String> {
+    toolchain::status(&state.workspace).await
+}
+
+#[tauri::command]
+async fn install_toolchain(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    toolchain::install(&state.workspace, &app).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -179,7 +190,9 @@ pub fn run() {
             read_exercise,
             save_exercise,
             reset_exercise,
-            check_exercise
+            check_exercise,
+            toolchain_status,
+            install_toolchain
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

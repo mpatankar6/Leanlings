@@ -6,7 +6,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use tokio::process::Command;
 
 /// Axioms a solution is allowed to depend on. Anything else (notably `sorryAx`,
 /// or an axiom the learner declared themselves) fails the check.
@@ -153,11 +152,11 @@ pub async fn check(workspace: &Path, ex: &Exercise, content: &str, banned: &[Str
         format!("{content}\n\n-- leanlings check\nexample : {statement} := {theorem}\n#print axioms {theorem}\n");
     fs::write(&file, source).map_err(|e| e.to_string())?;
 
-    let mut cmd = Command::new("lake");
-    cmd.arg("env").arg("lean").arg(&file).current_dir(workspace);
-    #[cfg(windows)]
-    cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
-    let out = cmd
+    let out = crate::toolchain::command("lake")
+        .arg("env")
+        .arg("lean")
+        .arg(&file)
+        .current_dir(workspace)
         .output()
         .await
         .map_err(|e| format!("could not run `lake` (is elan installed and on PATH?): {e}"))?;

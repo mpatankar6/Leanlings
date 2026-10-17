@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { LeanMonaco, LeanMonacoEditor } from "lean4monaco";
-import { formatBytes, LoadingScreen, Step, StepState } from "./Loading";
+import { formatBytes, LoadingScreen, Prompt, Step, StepState } from "./Loading";
 import { Markdown, setLeanLanguageReady } from "./content/Markdown";
 import { GlossaryPage, GlossaryProvider, Term } from "./content/Glossary";
 import { QuizView } from "./content/QuizView";
@@ -22,8 +23,11 @@ type LeanStatus =
   | { stage: "fileReady"; uri: string }
   | { stage: "error"; message: string };
 
-type StepId = "app" | "exercises" | "editor" | "server" | "file";
-const STEP_ORDER: StepId[] = ["app", "exercises", "editor", "server", "file"];
+/** From the `toolchain_status` command (see toolchain.rs). */
+type ToolchainStatus = { toolchain: string; elanFound: boolean; installed: boolean };
+
+type StepId = "app" | "exercises" | "toolchain" | "editor" | "server" | "file";
+const STEP_ORDER: StepId[] = ["app", "exercises", "toolchain", "editor", "server", "file"];
 
 function initialSteps(): Record<StepId, Step> {
   const boot = window.__bootStats;
@@ -36,6 +40,7 @@ function initialSteps(): Record<StepId, Step> {
       endedAt: performance.now(),
     },
     exercises: { label: "Reading chapters and progress", state: "pending" },
+    toolchain: { label: "Checking the Lean toolchain", state: "pending" },
     editor: { label: "Starting editor and infoview", state: "pending" },
     server: { label: "Starting Lean server", state: "pending" },
     file: { label: "Checking your current exercise", state: "pending" },
@@ -74,6 +79,8 @@ function App() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [showHint, setShowHint] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
+  const [toolchainReady, setToolchainReady] = useState(false);
+  const [prompt, setPrompt] = useState<Prompt | null>(null);
 
   const editorEl = useRef<HTMLDivElement>(null);
   const infoviewEl = useRef<HTMLDivElement>(null);
@@ -137,9 +144,72 @@ function App() {
       .catch((e) => mark("exercises", "error", { detail: String(e) }));
   }, [mark]);
 
+  // Make sure the pinned toolchain is installed before anything runs `lake`;
+  // otherwise elan would silently download it on the first call.
+  useEffect(() => {
+    if (!snapshot) return;
+    const version = (t: string) => t.replace(/^.*:v?/, "");
+    const install = (t: string) => {
+      setPrompt(null);
+      mark("toolchain", "active", { detail: `Downloading and installing Lean ${version(t)}…` });
+      const unlisten = listen<{ bytes: number }>("toolchain-progress", ({ payload }) => {
+        if (payload.bytes > 0)
+          mark("toolchain", "active", {
+            detail: `Downloading and installing Lean ${version(t)}… ${formatBytes(payload.bytes)}`,
+          });
+      });
+      invoke("install_toolchain")
+        .then(() => {
+          mark("toolchain", "done", { detail: `Installed Lean ${version(t)}` });
+          setToolchainReady(true);
+        })
+        .catch((e) => mark("toolchain", "error", { detail: String(e) }))
+        .finally(() => void unlisten.then((f) => f()));
+    };
+    mark("toolchain", "active");
+    invoke<ToolchainStatus>("toolchain_status")
+      .then((t) => {
+        if (t.installed) {
+          mark("toolchain", "done", { detail: `Lean ${version(t.toolchain)}` });
+          setToolchainReady(true);
+        } else if (!t.elanFound) {
+          mark("toolchain", "error", {
+            detail: "elan, the Lean version manager, isn't installed. Install it, then retry.",
+          });
+          setPrompt({
+            message: "Leanlings needs elan to download and run Lean.",
+            actions: [
+              { label: "Retry", onClick: () => window.location.reload() },
+              {
+                label: "How to install elan",
+                primary: true,
+                onClick: () => void openUrl("https://github.com/leanprover/elan#installation"),
+              },
+            ],
+          });
+        } else {
+          mark("toolchain", "active", { detail: `Lean ${version(t.toolchain)} isn't installed` });
+          setPrompt({
+            message: `Leanlings needs Lean ${version(t.toolchain)} (${t.toolchain}), which isn't installed yet. Download and install it now with elan? This is a large download.`,
+            actions: [
+              {
+                label: "Not now",
+                onClick: () => {
+                  setPrompt(null);
+                  mark("toolchain", "error", { detail: `Lean ${version(t.toolchain)} is needed to check your proofs.` });
+                },
+              },
+              { label: "Install", primary: true, onClick: () => install(t.toolchain) },
+            ],
+          });
+        }
+      })
+      .catch((e) => mark("toolchain", "error", { detail: String(e) }));
+  }, [snapshot, mark]);
+
   // Start the single LeanMonaco instance (LSP client + infoview).
   useEffect(() => {
-    if (!snapshot || !infoviewEl.current) return;
+    if (!snapshot || !toolchainReady || !infoviewEl.current) return;
     const lean = new LeanMonaco();
     lean.setInfoviewElement(infoviewEl.current);
     mark("editor", "active", { detail: "Loading Monaco and the Lean extension…" });
@@ -154,7 +224,7 @@ function App() {
       (e) => mark("editor", "error", { detail: String(e) }),
     );
     return () => lean.dispose();
-  }, [snapshot, mark]);
+  }, [snapshot, toolchainReady, mark]);
 
   // The last startup step: Lean has finished processing the first exercise.
   const startupFile = useRef<string | null>(null);
@@ -221,7 +291,8 @@ function App() {
       editor.current = null;
       ed.dispose();
     };
-  }, [current, runCheck]);
+    // toolchainReady: leanReady is set once the toolchain is installed.
+  }, [current, runCheck, toolchainReady]);
 
   const openExercise = useCallback((id: string) => {
     setCurrentId(id);
@@ -236,7 +307,7 @@ function App() {
     editor.current.editor.setValue(original);
   };
 
-  const loader = !loaderGone && <LoadingScreen steps={stepList} hidden={loaded} />;
+  const loader = !loaderGone && <LoadingScreen steps={stepList} hidden={loaded} prompt={prompt} />;
   if (!snapshot) return loader;
 
   const chapterOf = (ex: Exercise | null) => chapters.find((c) => c.id === ex?.chapter);

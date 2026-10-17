@@ -13,8 +13,14 @@ export type Step = {
   endedAt?: number;
 };
 
+/** A question shown under the checklist, e.g. "install the toolchain?". */
+export type Prompt = {
+  message: string;
+  actions: { label: string; primary?: boolean; onClick: () => void }[];
+};
+
 /** Startup checklist overlay. Styles live in index.html so they match the pre-JS loader. */
-export function LoadingScreen({ steps, hidden }: { steps: Step[]; hidden: boolean }) {
+export function LoadingScreen({ steps, hidden, prompt }: { steps: Step[]; hidden: boolean; prompt?: Prompt | null }) {
   // Re-render while visible so elapsed times tick.
   const [, tick] = useState(0);
   useEffect(() => {
@@ -55,7 +61,19 @@ export function LoadingScreen({ steps, hidden }: { steps: Step[]; hidden: boolea
             </li>
           ))}
         </ul>
-        {failed && (
+        {prompt && (
+          <div className="loader-prompt">
+            <p>{prompt.message}</p>
+            <div className="loader-actions">
+              {prompt.actions.map((a) => (
+                <button key={a.label} className={a.primary ? "primary" : undefined} onClick={a.onClick}>
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {failed && !prompt && (
           <div className="loader-actions">
             <button onClick={() => window.location.reload()}>Retry</button>
           </div>

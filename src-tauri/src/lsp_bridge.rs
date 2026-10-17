@@ -18,7 +18,6 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::process::Command;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::tungstenite::handshake::server::{ErrorResponse, Request, Response};
 use tokio_tungstenite::tungstenite::http::StatusCode;
@@ -87,15 +86,13 @@ async fn handle(stream: TcpStream, workspace: &Path, token: &str, app: &AppHandl
     })
     .await?;
 
-    let mut cmd = Command::new("lake");
+    let mut cmd = crate::toolchain::command("lake");
     cmd.args(["serve", "--"])
         .current_dir(workspace)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .kill_on_drop(true);
-    #[cfg(windows)]
-    cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
     emit(LeanStatus::Spawning);
     let mut child = cmd.spawn().map_err(|e| {
         let message = format!("Could not start `lake serve` (is elan installed and on PATH?): {e}");
